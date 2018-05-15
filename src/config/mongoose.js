@@ -3,18 +3,26 @@ import Worker from '../models/worker.js';
 import Spending from '../models/spending.js';
 import Status from '../models/spending.js';
 
-mongoose.connect('mongodb://localhost/workdays');
+// Database connection constants
+const HOST = 'localhost';
+const DATABASE = 'workdays';
 
-const dbConnection = mongoose.connection;
+// Trying to establish connection
+mongoose.connect(`mongodb://${HOST}/${DATABASE}`);
 
-dbConnection.on(
+// On db connection error
+mongoose.connection.on(
   'error',
   console.error.bind(console, 'Connection to database error:'),
 );
+
+// On db connection success
+mongoose.connection.once('open', () => {
+  console.log('Connection to database established');
+});
 
 export default {
   Worker,
   Spending,
   Status,
-  mongoose,
 };
