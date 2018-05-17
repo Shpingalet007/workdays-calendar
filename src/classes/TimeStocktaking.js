@@ -124,10 +124,12 @@ class Worker {
     return new Promise((resolve, reject) => {
       db.Worker.findOneAndUpdate(checkedQuery, checkedData)
         .then((result) => {
-          if (!result) reject({
-            message: 'No worker found!',
-            code: 404,
-          });
+          if (!result) {
+            reject({
+              message: 'No worker found!',
+              code: 404,
+            });
+          }
           resolve(result);
         }, (error) => {
           reject(error);
@@ -246,6 +248,77 @@ class Spend {
       }).then((spendInfo) => {
         if (!spendInfo) reject('Time spend not found!');
         resolve(spendInfo);
+      });
+    });
+  }
+
+  list({
+    emails,
+    dates,
+    datesAreRange,
+  }) {
+    // Подготовка запроса по электронной почте
+    let emailsQuery;
+
+    if (!Array.isArray(emails)) emailsQuery = emails;
+    else if (emails.length >= 2) emailsQuery = { $in: emails };
+
+    // Подготовка запроса по дате
+    let datesQuery;
+
+    if (!Array.isArray(dates)) datesQuery = dates;
+    else if (dates.length === 2 && datesAreRange) datesQuery = { $gt: dates[0], $lt: dates[1] };
+    else if (dates.length > 2 || !datesAreRange) datesQuery = { $in: dates };
+
+    console.log(datesAreRange, datesQuery);
+
+    return new Promise((resolve, reject) => {
+      db.Spending.find({
+        date: datesQuery,
+      }).populate({
+        path: 'worker',
+        email: emailsQuery,
+        select: '-_id -__v',
+      }).select('-_id -__v')
+        .then((result) => {
+          resolve(result);
+        }, (error) => {
+          reject(error);
+        });
+    });
+  }
+
+  // TODO: Delete this...
+  generateReport({
+    emails,
+    dates,
+    datesAreRange,
+  }) {
+    // Подготовка запроса по электронной почте
+    let emailsQuery;
+
+    if (!Array.isArray(emails)) emailsQuery = emails;
+    else if (emails.length >= 2) emailsQuery = { $in: emails };
+
+    // Подготовка запроса по дате
+    let datesQuery;
+
+    if (!Array.isArray(dates)) datesQuery = dates;
+    else if (dates.length === 2 && datesAreRange) datesQuery = { $gt: dates[0], $lt: dates[1] };
+    else if (dates.length > 2 || !datesAreRange) datesQuery = { $in: dates };
+
+    console.log(datesAreRange, datesQuery);
+
+    return new Promise((resolve, reject) => {
+      db.Spending.find({
+        date: datesQuery,
+      }).populate({
+        path: 'worker',
+        email: emailsQuery,
+      }).then((result) => {
+        resolve(result);
+      }, (error) => {
+        reject(error);
       });
     });
   }

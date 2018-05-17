@@ -3,14 +3,14 @@ import timeStock from '../../classes/TimeStocktaking';
 import jsonAnswer from '../../classes/jsonAnswer';
 
 function deleteTimespendRecordRoute(req, res) {
-  if (!_.has(req, 'query')) return;
+  if (!_.has(req, 'body')) return;
 
-  const queryParamsPrep = req.query;
+  const bodyPrep = req.body;
 
   // Преобразование даты
-  queryParamsPrep.date = parseDate(queryParamsPrep.date);
+  bodyPrep.date = parseDate(bodyPrep.date);
 
-  timeStock.spend.remove(queryParamsPrep)
+  timeStock.spend.remove(bodyPrep)
     .then((result) => {
       jsonAnswer.success(res, {
         message: 'Time spend record was removed!',

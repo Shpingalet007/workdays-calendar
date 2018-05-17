@@ -2,10 +2,10 @@ import timeStock from '../../classes/TimeStocktaking';
 import jsonAnswer from '../../classes/jsonAnswer';
 
 function deleteWorkerRoute(req, res) {
-  if (!_.has(req, 'query')) return;
+  if (!_.has(req, 'body')) return;
 
   timeStock.worker
-    .remove(req.query)
+    .remove(req.body)
     .then((result) => {
       jsonAnswer.success(res, {
         message: 'Worker removed!',

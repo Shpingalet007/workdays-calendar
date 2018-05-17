@@ -2,13 +2,10 @@ import timeStock from '../../classes/TimeStocktaking';
 import jsonAnswer from '../../classes/jsonAnswer';
 
 function updateWorkerRoute(req, res) {
-  if (
-    !_.has(req, 'query')
-    || !_.has(req, 'body')
-  ) return;
+  if (!_.has(req, 'body')) return;
 
   timeStock.worker
-    .edit(req.query, req.body)
+    .edit(req.body.query, req.body.update)
     .then((result) => {
       jsonAnswer.success(res, {
         message: 'Worker found!',
