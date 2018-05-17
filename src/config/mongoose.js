@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
-import Worker from '../models/worker.js';
-import Spending from '../models/spending.js';
-import Status from '../models/spending.js';
+import Worker from '../models/worker';
+import Spending from '../models/spending';
+import Status from '../models/status';
 
 // Database connection constants
 const HOST = 'localhost';

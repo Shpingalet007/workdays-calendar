@@ -16,7 +16,11 @@ function readTimespendRecordsRoute(req, res) {
   timeStock.spend.list({
     emails: bodyPrep.emails,
     dates: bodyPrep.dates,
+    statuses: bodyPrep.statuses,
     datesAreRange: bodyPrep.datesAreRange,
+    optimized: bodyPrep.optimized,
+    noKeys: bodyPrep.noKeys,
+    onlyStats: bodyPrep.needStats,
   }).then((result) => {
     jsonAnswer.success(res, {
       message: 'Time spends found!',

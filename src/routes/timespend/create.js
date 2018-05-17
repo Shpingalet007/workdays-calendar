@@ -6,16 +6,16 @@ import jsonAnswer from '../../classes/jsonAnswer';
 function createTimespendRecordRoute(req, res) {
   if (!_.has(req, 'body')) return;
 
-  const bodyParamsPrep = req.body;
+  const bodyPrep = req.body;
 
   // Преобразование даты
-  (bodyParamsPrep.date)
-    ? bodyParamsPrep.date = parseDate(bodyParamsPrep.date)
-    : bodyParamsPrep.date = parseDate(moment().format('DD.MM.YYYY'));
+  bodyPrep.date = (bodyPrep.date)
+    ? parseDate(bodyPrep.date)
+    : parseDate(moment().format('DD.MM.YYYY'));
 
-  console.log(bodyParamsPrep.date);
+  console.log(bodyPrep.date);
 
-  timeStock.spend.create(bodyParamsPrep)
+  timeStock.spend.create(bodyPrep)
     .then((result) => {
       jsonAnswer.success(res, {
         message: result,

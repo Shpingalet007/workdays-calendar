@@ -91,7 +91,6 @@ class Worker {
 
     return new Promise((resolve, reject) => {
       db.Worker.findOneAndRemove(query)
-        .exec()
         .then((workerInfo) => {
           if (!workerInfo) reject('Worker with so credentials not found!');
           resolve(workerInfo);
@@ -163,8 +162,10 @@ class Spend {
 
   create(data) {
     if (!data.email) return;
+    if (!data.status) return;
 
     const email = data.email;
+    const status = data.status;
     const prepData = _.compactObject(data);
 
     const checkedData = _.pick(prepData, [
@@ -177,24 +178,32 @@ class Spend {
         .then((workerId) => {
           checkedData.worker = workerId;
 
-          db.Spending.count({
+          return db.Spending.count({
             worker: workerId,
             date: data.date,
-          }).then((exists) => {
-            if (exists) {
-              reject({
-                message: 'There is a record for selected worker and date!',
-                code: 400,
-              });
-
-              return;
-            }
-
-            const spend = new db.Spending(checkedData);
-            spend.save((err) => {
-              if (err) reject(err);
-              resolve('Spend time record added successfully!');
+          });
+        })
+        .then((exists) => {
+          if (exists) {
+            reject({
+              message: 'There is a record for selected worker and date!',
+              code: 400,
             });
+
+            return;
+          }
+
+          return db.Status.findOne({
+            title: status,
+          });
+        })
+        .then((status) => {
+          checkedData.status = status._id;
+
+          const spend = new db.Spending(checkedData);
+          spend.save((err) => {
+            if (err) reject(err);
+            resolve('Spend time record added successfully!');
           });
         });
     });
@@ -204,7 +213,30 @@ class Spend {
     email,
     date,
     efficiency,
+    status,
   }) {
+    function proceedUpdate(status) {
+      if (status) valuesForUpdate.status = status._id;
+
+      if (!_.isEmpty(valuesForUpdate)) {
+        db.Spending.findOneAndUpdate(checkedQuery, valuesForUpdate)
+          .populate({
+            path: 'worker',
+            email,
+          })
+          .populate({
+            path: 'status',
+            title: status,
+          })
+          .then((result) => {
+            if (!result) reject('No spend time record found!');
+            resolve(result);
+          }, (error) => {
+            reject(error.message);
+          });
+      }
+    }
+
     return new Promise((resolve, reject) => {
       // Preparing data
       const prepQuery = _.compactObject(query);
@@ -215,20 +247,15 @@ class Spend {
 
       if (date) valuesForUpdate.date = date;
       if (efficiency) valuesForUpdate.efficiency = efficiency;
+      if (status) {
+        db.Status.findOne({
+          title: status,
+        }).then(proceedUpdate);
 
-      if (!_.isEmpty(valuesForUpdate)) {
-        db.Spending.findOneAndUpdate(checkedQuery, valuesForUpdate)
-          .populate({
-            path: 'worker',
-            email,
-          })
-          .then((result) => {
-            if (!result) reject('No spend time record found!');
-            resolve(result);
-          }, (error) => {
-            reject(error.message);
-          });
+        return true;
       }
+
+      proceedUpdate();
     });
   }
 
@@ -255,33 +282,142 @@ class Spend {
   list({
     emails,
     dates,
+    statuses,
     datesAreRange,
+    optimized,
+    noKeys,
+    onlyStats,
   }) {
-    // Подготовка запроса по электронной почте
-    let emailsQuery;
+    function optimizeData(data) {
+      function getWorkers(data) {
+        const uniqueIds = [];
 
-    if (!Array.isArray(emails)) emailsQuery = emails;
-    else if (emails.length >= 2) emailsQuery = { $in: emails };
+        let workers = data.map((timeSpend) => {
+          const worker = timeSpend.worker;
 
-    // Подготовка запроса по дате
+          // Short function to find unique id's
+          const isUnique = (id) => {
+            const found = _.find(uniqueIds, uniqueId => (uniqueId === id));
+            return (found === undefined);
+          };
+
+          if (isUnique(worker._id) !== false) {
+            uniqueIds.push(worker._id);
+            return worker;
+          }
+        });
+
+        workers = _.compact(workers);
+
+        const workersObj = {};
+        workers.map((worker) => {
+          console.log(worker);
+          workersObj[worker._id] = _.omit(worker, '_id');
+        });
+
+        return workersObj;
+      }
+      function removeWorkersFullData(data) {
+        const copyData = data;
+
+        copyData.map((val, i) => {
+          copyData[i].worker = copyData[i].worker._id;
+        });
+
+        return copyData;
+      }
+
+      const workers = getWorkers(data);
+      const timespends = removeWorkersFullData(data);
+
+      return {
+        timespends,
+        workers,
+      };
+    }
+    function useArrays(data) {
+      const timespends = data.timespends
+        .map(timespend => _.values(timespend));
+
+      const workers = _.mapObject(data.workers, worker => _.values(worker));
+
+      return {
+        timespends,
+        workers,
+      };
+    }
+
     let datesQuery;
 
-    if (!Array.isArray(dates)) datesQuery = dates;
-    else if (dates.length === 2 && datesAreRange) datesQuery = { $gt: dates[0], $lt: dates[1] };
+    if (dates.length === 2 && datesAreRange) datesQuery = { $gt: dates[0], $lt: dates[1] };
     else if (dates.length > 2 || !datesAreRange) datesQuery = { $in: dates };
-
-    console.log(datesAreRange, datesQuery);
 
     return new Promise((resolve, reject) => {
       db.Spending.find({
         date: datesQuery,
       }).populate({
         path: 'worker',
-        email: emailsQuery,
-        select: '-_id -__v',
+        select: '-__v',
+      }).populate({
+        path: 'status',
+        select: '-__v',
       }).select('-_id -__v')
+        .sort('date')
+        .lean()
         .then((result) => {
-          resolve(result);
+          function genStatistics(data) {
+            // Группировка по работникам
+            const workersSpends = {};
+            emails.map((email) => {
+              workersSpends[email] = data.map((timespend) => {
+                if (timespend.worker.email === email) {
+                  return _.omit(timespend, 'worker');
+                }
+              });
+              workersSpends[email] = _.compact(workersSpends[email]);
+            });
+
+            // Группировка по статусам
+            const groupedSpends = {};
+            statuses.map((status) => {
+              groupedSpends[status] = _.mapObject(workersSpends, (workerTimespends, key) => {
+                let workerSpends = {};
+
+                workerSpends = workerTimespends.map((timespend) => {
+                  if (timespend.status.title === status) return timespend;
+                });
+
+                return _.compact(workerSpends);
+              });
+            });
+
+            // Подсчёт рабочего времени
+            const workersCounters = {};
+            _.map(groupedSpends, (workers, status) => {
+              _.map(workers, (timespends, worker) => {
+                timespends.map((timespend) => {
+                  if (!workersCounters[worker]) workersCounters[worker] = {};
+                  if (!workersCounters[worker][status]) workersCounters[worker][status] = 0;
+
+                  workersCounters[worker][status] += timespend.efficiency;
+                });
+              });
+            });
+
+            return workersCounters;
+          }
+
+          let resultPrep = result;
+          if (optimized) {
+            resultPrep = optimizeData(resultPrep);
+
+            if (noKeys) resultPrep = useArrays(resultPrep);
+          }
+
+          if (onlyStats) resultPrep = genStatistics(result);
+
+
+          resolve(resultPrep);
         }, (error) => {
           reject(error);
         });

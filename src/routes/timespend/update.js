@@ -9,15 +9,20 @@ function updateTimespendRecordRoute(req, res) {
     !_.has(req, 'body')
   ) return;
 
-  const queryParamsPrep = req.query;
-  const bodyParamsPrep = req.body;
+  const queryPrep = req.body.query;
+  const updatePrep = req.body.update;
 
   // Преобразование даты
-  (queryParamsPrep.date)
-    ? queryParamsPrep.date = parseDate(queryParamsPrep.date)
-    : queryParamsPrep.date = parseDate(moment().format('DD.MM.YYYY'));
+  (queryPrep.date)
+    ? queryPrep.date = parseDate(queryPrep.date)
+    : queryPrep.date = parseDate(moment().format('DD.MM.YYYY'));
 
-  timeStock.spend.edit(queryParamsPrep, bodyParamsPrep)
+  // Преобразование даты
+  (updatePrep.date)
+    ? updatePrep.date = parseDate(updatePrep.date)
+    : updatePrep.date = parseDate(moment().format('DD.MM.YYYY'));
+
+  timeStock.spend.edit(queryPrep, updatePrep)
     .then((result) => {
       jsonAnswer.success(res, {
         message: 'Time spend record updated',

@@ -1,6 +1,7 @@
 import _ from './config/underscore';
 import express from 'express';
 import bodyParser from 'body-parser';
+import compression from 'compression';
 
 // Importing worker routes for express router
 import createWorkerRoute from './routes/worker/create';
@@ -25,6 +26,10 @@ const PORT = 4080;
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+
+app.use(compression({
+  threshold: 1,
+}));
 
 const router = express.Router();
 

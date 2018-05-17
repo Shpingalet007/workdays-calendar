@@ -7,9 +7,4 @@ const StatusSchema = new Schema({
 
 const StatusModel = mongoose.model('Status', StatusSchema);
 
-let a = new StatusModel({
-  title: 'На рабочем месте',
-});
-a.save();
-
 export default StatusModel;
