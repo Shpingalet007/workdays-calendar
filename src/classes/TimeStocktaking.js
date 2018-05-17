@@ -215,28 +215,6 @@ class Spend {
     efficiency,
     status,
   }) {
-    function proceedUpdate(status) {
-      if (status) valuesForUpdate.status = status._id;
-
-      if (!_.isEmpty(valuesForUpdate)) {
-        db.Spending.findOneAndUpdate(checkedQuery, valuesForUpdate)
-          .populate({
-            path: 'worker',
-            email,
-          })
-          .populate({
-            path: 'status',
-            title: status,
-          })
-          .then((result) => {
-            if (!result) reject('No spend time record found!');
-            resolve(result);
-          }, (error) => {
-            reject(error.message);
-          });
-      }
-    }
-
     return new Promise((resolve, reject) => {
       // Preparing data
       const prepQuery = _.compactObject(query);
@@ -244,6 +222,26 @@ class Spend {
       const checkedQuery = _.pick(prepQuery, ['date']);
 
       const valuesForUpdate = {};
+
+      function proceedUpdate(status) {
+        if (status) valuesForUpdate.status = status._id;
+
+        if (!_.isEmpty(valuesForUpdate)) {
+          db.Spending.findOneAndUpdate(checkedQuery, valuesForUpdate)
+            .populate({
+              path: 'worker',
+            })
+            .populate({
+              path: 'status',
+            })
+            .then((result) => {
+              if (!result) reject('No spend time record found!');
+              resolve(result);
+            }, (error) => {
+              reject(error.message);
+            });
+        }
+      }
 
       if (date) valuesForUpdate.date = date;
       if (efficiency) valuesForUpdate.efficiency = efficiency;
@@ -365,48 +363,6 @@ class Spend {
         .sort('date')
         .lean()
         .then((result) => {
-          function genStatistics(data) {
-            // Группировка по работникам
-            const workersSpends = {};
-            emails.map((email) => {
-              workersSpends[email] = data.map((timespend) => {
-                if (timespend.worker.email === email) {
-                  return _.omit(timespend, 'worker');
-                }
-              });
-              workersSpends[email] = _.compact(workersSpends[email]);
-            });
-
-            // Группировка по статусам
-            const groupedSpends = {};
-            statuses.map((status) => {
-              groupedSpends[status] = _.mapObject(workersSpends, (workerTimespends, key) => {
-                let workerSpends = {};
-
-                workerSpends = workerTimespends.map((timespend) => {
-                  if (timespend.status.title === status) return timespend;
-                });
-
-                return _.compact(workerSpends);
-              });
-            });
-
-            // Подсчёт рабочего времени
-            const workersCounters = {};
-            _.map(groupedSpends, (workers, status) => {
-              _.map(workers, (timespends, worker) => {
-                timespends.map((timespend) => {
-                  if (!workersCounters[worker]) workersCounters[worker] = {};
-                  if (!workersCounters[worker][status]) workersCounters[worker][status] = 0;
-
-                  workersCounters[worker][status] += timespend.efficiency;
-                });
-              });
-            });
-
-            return workersCounters;
-          }
-
           let resultPrep = result;
           if (optimized) {
             resultPrep = optimizeData(resultPrep);
@@ -414,48 +370,10 @@ class Spend {
             if (noKeys) resultPrep = useArrays(resultPrep);
           }
 
-          if (onlyStats) resultPrep = genStatistics(result);
-
-
           resolve(resultPrep);
         }, (error) => {
           reject(error);
         });
-    });
-  }
-
-  // TODO: Delete this...
-  generateReport({
-    emails,
-    dates,
-    datesAreRange,
-  }) {
-    // Подготовка запроса по электронной почте
-    let emailsQuery;
-
-    if (!Array.isArray(emails)) emailsQuery = emails;
-    else if (emails.length >= 2) emailsQuery = { $in: emails };
-
-    // Подготовка запроса по дате
-    let datesQuery;
-
-    if (!Array.isArray(dates)) datesQuery = dates;
-    else if (dates.length === 2 && datesAreRange) datesQuery = { $gt: dates[0], $lt: dates[1] };
-    else if (dates.length > 2 || !datesAreRange) datesQuery = { $in: dates };
-
-    console.log(datesAreRange, datesQuery);
-
-    return new Promise((resolve, reject) => {
-      db.Spending.find({
-        date: datesQuery,
-      }).populate({
-        path: 'worker',
-        email: emailsQuery,
-      }).then((result) => {
-        resolve(result);
-      }, (error) => {
-        reject(error);
-      });
     });
   }
 }
