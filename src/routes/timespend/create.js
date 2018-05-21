@@ -1,25 +1,29 @@
-import moment from 'moment';
 import parseDate from '../../config/dateParser';
 import timeStock from '../../classes/TimeStocktaking';
 import jsonAnswer from '../../classes/jsonAnswer';
 
-function createTimespendRecordRoute(req, res) {
-  if (!_.has(req, 'body')) return;
+function createTimespendRecordRoute({ body }, res) {
+  // Input checks
+  if (!_.isObject(body)) return jsonAnswer.warn(res, 'Body is not JSON!');
 
-  const bodyPrep = req.body;
+  const json = _.compactObject(body);
 
-  // Преобразование даты
-  bodyPrep.date = (bodyPrep.date)
-    ? parseDate(bodyPrep.date)
-    : parseDate(moment().format('DD.MM.YYYY'));
+  if (!_.has(json, 'email')) return jsonAnswer.warn(res, 'Email required!');
+  if (!_.has(json, 'status')) return jsonAnswer.warn(res, 'Status required!');
 
-  console.log(bodyPrep.date);
+  // Prepared data
+  const dataPrep = _.pick(json, [
+    'email',
+    'status',
+    'efficiency',
+  ]);
 
-  timeStock.spend.create(bodyPrep)
+  dataPrep.date = parseDate(json.date);
+
+  // Sending request
+  timeStock.Spend.create(dataPrep)
     .then((result) => {
-      jsonAnswer.success(res, {
-        message: result,
-      });
+      jsonAnswer.success(res, result);
     }, (error) => {
       jsonAnswer.warn(res, error);
     });

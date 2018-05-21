@@ -1,36 +1,33 @@
-import moment from 'moment';
 import parseDate from '../../config/dateParser';
 import timeStock from '../../classes/TimeStocktaking';
 import jsonAnswer from '../../classes/jsonAnswer';
 
-function readTimespendRecordsRoute(req, res) {
-  if (!_.has(req, 'body')) return;
-  if (!_.has(req.body, 'emails')) return;
-  if (!_.has(req.body, 'dates')) return;
+function readTimespendRecordsRoute({ body }, res) {
+  // Input checks
+  if (!_.isObject(body)) jsonAnswer.warn(res, 'Body is not JSON!');
 
-  const bodyPrep = req.body;
+  const json = _.compactObject(body);
 
-  bodyPrep.dates = bodyPrep.dates
+  if (!_.has(json, 'emails')) jsonAnswer.warn(res, 'Emails required!');
+  if (!_.has(json, 'dates')) jsonAnswer.warn(res, 'Dates required!');
+
+  // Prepared data
+  const dataPrep = _.pick(json, [
+    'emails',
+    'statuses',
+    'datesAreRange',
+  ]);
+
+  dataPrep.dates = json.dates
     .map(date => parseDate(date));
 
-  timeStock.spend.list({
-    emails: bodyPrep.emails,
-    dates: bodyPrep.dates,
-    statuses: bodyPrep.statuses,
-    datesAreRange: bodyPrep.datesAreRange,
-    optimized: bodyPrep.optimized,
-    noKeys: bodyPrep.noKeys,
-    onlyStats: bodyPrep.needStats,
-  }).then((result) => {
-    jsonAnswer.success(res, {
-      message: 'Time spends found!',
-      data: result,
+  // Sending request
+  timeStock.Spend.list(dataPrep)
+    .then((result) => {
+      jsonAnswer.success(res, result);
+    }, (error) => {
+      jsonAnswer.warn(res, error);
     });
-  }, (error) => {
-    jsonAnswer.warn(res, {
-      message: error,
-    });
-  });
 }
 
 export default readTimespendRecordsRoute;

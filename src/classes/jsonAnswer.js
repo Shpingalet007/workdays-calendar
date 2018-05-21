@@ -18,6 +18,15 @@ class JSON_Answer {
   }
 
   warn(res, data) {
+    if (typeof data === 'string') {
+      res.json({
+        message: data,
+        code: 400,
+      });
+
+      return;
+    }
+
     let prepData = _.compactObject(data);
     prepData = _.pick(prepData, [
       'data',

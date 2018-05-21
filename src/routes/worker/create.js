@@ -1,20 +1,28 @@
 import timeStock from '../../classes/TimeStocktaking';
 import jsonAnswer from '../../classes/jsonAnswer';
 
-function createWorkerRoute(req, res) {
-  if (!_.has(req, 'body')) return;
+function createWorkerRoute({ body }, res) {
+  // Input checks
+  if (!_.isObject(body)) return jsonAnswer.warn(res, 'Body is not JSON!');
 
-  timeStock.worker
-    .create(req.body)
+  const json = _.compactObject(body);
+
+  if (!_.has(json, 'name')) return jsonAnswer.warn(res, 'Name required!');
+  if (!_.has(json, 'email')) return jsonAnswer.warn(res, 'Email required!');
+
+  // Prepared data
+  const dataPrep = _.pick(json, [
+    'name',
+    'email',
+    'phone',
+    'info',
+  ]);
+
+  timeStock.Worker.create(dataPrep)
     .then((result) => {
-      jsonAnswer.success(res, {
-        message: 'Successfully created new worker!',
-      });
+      jsonAnswer.success(res, result);
     }, (error) => {
-      jsonAnswer.warn(res, {
-        message: 'Database error occured!',
-        details: error.message,
-      });
+      jsonAnswer.warn(res, error);
     });
 }
 

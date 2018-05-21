@@ -1,20 +1,24 @@
 import timeStock from '../../classes/TimeStocktaking';
 import jsonAnswer from '../../classes/jsonAnswer';
 
-function readWorkerRoute(req, res) {
-  if (!_.has(req, 'body')) return;
+function readWorkerRoute({ body }, res) {
+  // Input checks
+  if (!_.isObject(body)) return jsonAnswer.warn(res, 'Body is not JSON!');
 
-  timeStock.worker
-    .find(req.body)
+  const json = _.compactObject(body);
+
+  if (!_.has(json, 'email')) return jsonAnswer.warn(res, 'Email required!');
+
+  // Prepared data
+  const dataPrep = _.pick(json, [
+    'email',
+  ]);
+
+  timeStock.Worker.find(dataPrep)
     .then((result) => {
-      jsonAnswer.success(res, {
-        message: 'Worker found!',
-        data: result,
-      });
+      jsonAnswer.success(res, result);
     }, (error) => {
-      jsonAnswer.warn(res, {
-        message: error,
-      });
+      jsonAnswer.warn(res, error);
     });
 }
 

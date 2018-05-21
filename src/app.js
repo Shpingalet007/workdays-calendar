@@ -3,7 +3,7 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import compression from 'compression';
 
-// Importing worker routes for express router
+// Importing Worker routes for express router
 import createWorkerRoute from './routes/worker/create';
 import readWorkerRoute from './routes/worker/read';
 import updateWorkerRoute from './routes/worker/update';
@@ -33,10 +33,10 @@ app.use(compression({
 const router = express.Router();
 
 // Worker CRUD operations
-router.post('/worker', createWorkerRoute);
-router.get('/worker', readWorkerRoute);
-router.put('/worker', updateWorkerRoute);
-router.delete('/worker', deleteWorkerRoute);
+router.post('/Worker', createWorkerRoute);
+router.get('/Worker', readWorkerRoute);
+router.put('/Worker', updateWorkerRoute);
+router.delete('/Worker', deleteWorkerRoute);
 
 // Time spend CRUD operations
 router.post('/timeSpend', createTimespendRecordRoute);

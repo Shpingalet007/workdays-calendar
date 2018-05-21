@@ -1,38 +1,33 @@
-import moment from 'moment';
 import parseDate from '../../config/dateParser';
 import timeStock from '../../classes/TimeStocktaking';
 import jsonAnswer from '../../classes/jsonAnswer';
 
-function updateTimespendRecordRoute(req, res) {
-  if (
-    !_.has(req, 'query') ||
-    !_.has(req, 'body')
-  ) return;
+function updateTimespendRecordRoute({ body }, res) {
+  // Input checks
+  if (!_.isObject(body)) return jsonAnswer.warn(res, 'Body is not JSON!');
 
-  const queryPrep = req.body.query;
-  const updatePrep = req.body.update;
+  const json = _.compactObject(body);
 
-  // Преобразование даты
-  (queryPrep.date)
-    ? queryPrep.date = parseDate(queryPrep.date)
-    : queryPrep.date = parseDate(moment().format('DD.MM.YYYY'));
+  if (!_.has(json, 'query')) return jsonAnswer.warn(res, 'Query parameters required!');
+  if (!_.has(json.query, 'email')) return jsonAnswer.warn(res, 'Query email required!');
+  if (!_.has(json.query, 'date')) return jsonAnswer.warn(res, 'Query date required!');
 
-  // Преобразование даты
-  (updatePrep.date)
-    ? updatePrep.date = parseDate(updatePrep.date)
-    : updatePrep.date = parseDate(moment().format('DD.MM.YYYY'));
+  if (_.isEmpty(json.update)) return jsonAnswer.warn(res, 'Update parameters required!');
 
-  timeStock.spend.edit(queryPrep, updatePrep)
+  // Prepared data
+  const queryPrep = json.query;
+  const updatePrep = json.update;
+
+  // Converting dates
+  queryPrep.date = parseDate(queryPrep.date);
+  updatePrep.date = parseDate(updatePrep.date);
+
+  // Sending request
+  timeStock.Spend.edit(queryPrep, updatePrep)
     .then((result) => {
-      jsonAnswer.success(res, {
-        message: 'Time spend record updated',
-        data: result,
-      });
+      jsonAnswer.success(res, result);
     }, (error) => {
-      jsonAnswer.warn(res, {
-        code: 400,
-        message: error,
-      });
+      jsonAnswer.warn(res, error);
     });
 }
 

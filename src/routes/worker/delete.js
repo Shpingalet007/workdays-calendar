@@ -1,21 +1,24 @@
 import timeStock from '../../classes/TimeStocktaking';
 import jsonAnswer from '../../classes/jsonAnswer';
 
-function deleteWorkerRoute(req, res) {
-  if (!_.has(req, 'body')) return;
+function deleteWorkerRoute({ body }, res) {
+  // Input checks
+  if (!_.isObject(body)) return jsonAnswer.warn(res, 'Body is not JSON!');
 
-  timeStock.worker
-    .remove(req.body)
+  const json = _.compactObject(body);
+
+  if (!_.has(json, 'email')) return jsonAnswer.warn(res, 'Email required!');
+
+  // Prepared data
+  const dataPrep = _.pick(json, [
+    'email',
+  ]);
+
+  timeStock.Worker.remove(dataPrep)
     .then((result) => {
-      jsonAnswer.success(res, {
-        message: 'Worker removed!',
-        data: result,
-      });
+      jsonAnswer.success(res, result);
     }, (error) => {
-      jsonAnswer.warn(res, {
-        code: 404,
-        message: error,
-      });
+      jsonAnswer.warn(res, error);
     });
 }
 
