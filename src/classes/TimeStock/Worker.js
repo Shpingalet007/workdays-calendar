@@ -35,7 +35,7 @@ class Worker {
       throw DataEvent.DBNotFound('Worker');
     }
 
-    return DataEvent.DBSuccess(workerData, 'Worker');
+    return DataEvent.DBSuccessFound(workerData, 'Worker');
   }
 
   static async create({

@@ -16,6 +16,14 @@ class DataEvent {
   static DBSuccess(object, dataName) {
     return new DataEvent({
       data: object,
+      message: `${dataName} request is successfull!`,
+      code: 200,
+    });
+  }
+
+  static DBSuccessFound(object, dataName) {
+    return new DataEvent({
+      data: object,
       message: `${dataName} successfully found!`,
       code: 200,
     });

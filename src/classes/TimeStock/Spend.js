@@ -31,7 +31,7 @@ class Spend {
       throw new DataEvent.DBNotFound('Timespend');
     }
 
-    return DataEvent.DBSuccess(timespendData, 'Timespend');
+    return DataEvent.DBSuccessFound(timespendData, 'Timespend');
   }
 
   static async create({
@@ -166,7 +166,7 @@ class Spend {
       throw DataEvent.DBNotFound('Timespend');
     }
 
-    return DataEvent.DBSuccess(removedTimespend, 'Timespend');
+    return DataEvent.DBSuccessFound(removedTimespend, 'Timespend');
   }
 
   static async list({
@@ -174,17 +174,19 @@ class Spend {
     dates,
     statuses,
     datesAreRange,
-  }) {
+  }, returnArr) {
     // Preparing datesQuery
     let dateQuery;
 
     if (dates.length === 2 && datesAreRange) dateQuery = { $gt: dates[0], $lt: dates[1] };
     else if (dates.length > 2 || !datesAreRange) dateQuery = { $in: dates };
+    else dateQuery = null;
 
     // Stage 1: Parsing from db associated with provided emails Workers ID's
-    const workerData = await db.Worker.find({
-      email: emails,
-    }).lean();
+    const query1 = (emails.length)
+      ? { email: emails } : {};
+
+    const workerData = await db.Worker.find(query1);
 
     // Throwing error if no data or no enough data
     if (_.isEmpty(workerData)) throw DataEvent.DBAssocNotFound('workers');
@@ -199,9 +201,11 @@ class Spend {
     else workerQuery = workerIds[0];
 
     // Stage 2: Parsing from db associated with provided statuses Status ID's
-    const statusData = await db.Status.find({
-      title: statuses,
-    }).lean();
+    const query2 = (statuses.length)
+      ? { title: statuses }
+      : {};
+
+    const statusData = await db.Status.find(query2);
 
     const statusIds = statusData.map(status => status._id);
 
@@ -216,11 +220,15 @@ class Spend {
     else statusQuery = statusIds[0];
 
     // Stage 3: Getting data about spends associated with Workers ID's and Status ID's
-    const timespendData = await db.Spending.find({
+    const query3 = {
       worker: workerQuery,
       status: statusQuery,
-      date: dateQuery,
-    }).select('-_id -__v')
+    };
+
+    if (dateQuery) query3.date = dateQuery;
+
+    const timespendData = await db.Spending.find(query3)
+      .select('-_id -__v')
       .populate({
         path: 'worker',
         select: 'email name -_id',
@@ -232,7 +240,29 @@ class Spend {
 
     if (_.isEmpty(timespendData)) throw DataEvent.DBNotFound('Timespends');
 
-    return DataEvent.DBSuccess(timespendData, 'Timespends');
+    if (returnArr) return timespendData;
+
+    return DataEvent.DBSuccessFound(timespendData, 'Timespends');
+  }
+
+  static async stats(data) {
+    // Stage 1: Getting timespends
+    const timespends = await Spend.list(data, true);
+
+    const workers = {};
+
+    timespends.map((timespend) => {
+      const { name } = timespend.worker;
+      const { title: status } = timespend.status;
+      const { efficiency } = timespend;
+
+      if (!workers[name]) workers[name] = {};
+      if (!workers[name][status]) workers[name][status] = 0;
+
+      workers[name][status] += efficiency;
+    });
+
+    return DataEvent.DBSuccess(workers, 'Statistics');
   }
 }
 

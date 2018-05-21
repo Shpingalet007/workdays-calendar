@@ -15,6 +15,7 @@ import readTimespendRecordRoute from './routes/timespend/read';
 import updateTimespendRecordRoute from './routes/timespend/update';
 import deleteTimespendRecordRoute from './routes/timespend/delete';
 import readTimespendRecordsRoute from './routes/timespend/list';
+import statsTimespendRecordsRoute from './routes/timespend/stats';
 
 // Transforming Underscore to global
 global._ = _;
@@ -46,6 +47,7 @@ router.delete('/timespend', deleteTimespendRecordRoute);
 
 // Time spends mass operations
 router.get('/timespends', readTimespendRecordsRoute);
+router.get('/timespends/stats', statsTimespendRecordsRoute);
 
 app.use('/api', router);
 app.listen(PORT);
