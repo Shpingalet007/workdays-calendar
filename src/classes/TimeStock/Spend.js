@@ -184,47 +184,51 @@ class Spend {
 
     // Stage 1: Parsing from db associated with provided emails Workers ID's
     const query1 = (emails.length)
-      ? { email: emails } : {};
+      ? { email: emails } : null;
 
-    const workerData = await db.Worker.find(query1);
-
-    // Throwing error if no data or no enough data
-    if (_.isEmpty(workerData)) throw DataEvent.DBAssocNotFound('workers');
-    else if (workerData.length < emails.length) throw DataEvent.DBAssocSomeNotFound('workers');
-
-    const workerIds = workerData.map(worker => worker._id);
-
-    // Preparing workersQuery
     let workerQuery;
 
-    if (workerIds.length > 1) workerQuery = { $in: workerIds };
-    else workerQuery = workerIds[0];
+    if (query1) {
+      const workerData = await db.Worker.find(query1);
+
+      // Throwing error if no data or no enough data
+      if (_.isEmpty(workerData)) throw DataEvent.DBAssocNotFound('workers');
+      else if (workerData.length < emails.length) throw DataEvent.DBAssocSomeNotFound('workers');
+
+      const workerIds = workerData.map(worker => worker._id);
+
+      if (workerIds.length > 1) workerQuery = { $in: workerIds };
+      else workerQuery = workerIds[0];
+    } else {
+      workerQuery = null;
+    }
 
     // Stage 2: Parsing from db associated with provided statuses Status ID's
     const query2 = (statuses.length)
-      ? { title: statuses }
-      : {};
+      ? { title: statuses } : null;
 
-    const statusData = await db.Status.find(query2);
-
-    const statusIds = statusData.map(status => status._id);
-
-    // Throwing error if no data or no enough data
-    if (_.isEmpty(statusData)) throw DataEvent.DBAssocNotFound('statuses');
-    else if (statusData.length < statuses.length) throw DataEvent.DBAssocSomeNotFound('statuses');
-
-    // Preparing statusesQuery
     let statusQuery;
 
-    if (statusIds.length > 1) statusQuery = { $in: statusIds };
-    else statusQuery = statusIds[0];
+    if (query2) {
+      const statusData = await db.Status.find(query2);
+
+      const statusIds = statusData.map(status => status._id);
+
+      // Throwing error if no data or no enough data
+      if (_.isEmpty(statusData)) throw DataEvent.DBAssocNotFound('statuses');
+      else if (statusData.length < statuses.length) throw DataEvent.DBAssocSomeNotFound('statuses');
+
+      if (statusIds.length > 1) statusQuery = { $in: statusIds };
+      else statusQuery = statusIds[0];
+    } else {
+      statusQuery = null;
+    }
 
     // Stage 3: Getting data about spends associated with Workers ID's and Status ID's
-    const query3 = {
-      worker: workerQuery,
-      status: statusQuery,
-    };
+    const query3 = {};
 
+    if (workerQuery) query3.worker = workerQuery;
+    if (statusQuery) query3.status = statusQuery;
     if (dateQuery) query3.date = dateQuery;
 
     const timespendData = await db.Spending.find(query3)
@@ -252,14 +256,14 @@ class Spend {
     const workers = {};
 
     timespends.map((timespend) => {
-      const { name } = timespend.worker;
+      const { email } = timespend.worker;
       const { title: status } = timespend.status;
       const { efficiency } = timespend;
 
-      if (!workers[name]) workers[name] = {};
-      if (!workers[name][status]) workers[name][status] = 0;
+      if (!workers[email]) workers[email] = {};
+      if (!workers[email][status]) workers[email][status] = 0;
 
-      workers[name][status] += efficiency;
+      workers[email][status] += efficiency;
     });
 
     return DataEvent.DBSuccess(workers, 'Statistics');
