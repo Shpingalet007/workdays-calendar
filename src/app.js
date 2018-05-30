@@ -40,7 +40,7 @@ router.put('/Worker', updateWorkerRoute);
 router.delete('/Worker', deleteWorkerRoute);
 
 // Time spend CRUD operations
-router.post('/timeSpend', createTimespendRecordRoute);
+router.post('/timespend', createTimespendRecordRoute);
 router.get('/timespend', readTimespendRecordRoute);
 router.put('/timespend', updateTimespendRecordRoute);
 router.delete('/timespend', deleteTimespendRecordRoute);
